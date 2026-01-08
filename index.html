@@ -14,6 +14,9 @@
             pointer-events: none;
             opacity: 0.7;
         }
+        .progress-bar {
+            transition: width 0.3s ease-in-out;
+        }
     </style>
 </head>
 <body class="bg-gray-800 text-gray-200">
@@ -23,16 +26,29 @@
             <h1 class="text-2xl sm:text-3xl font-bold text-center text-teal-400">Cuestionario de Enfermería (Parte 2)</h1>
         </header>
 
-        <!-- Scoreboard -->
-        <div class="bg-gray-700 shadow-md rounded-lg p-4 mb-6 flex justify-around text-center">
-            <div>
-                <p class="text-sm text-gray-400">ACIERTOS</p>
+        <!-- Marcador Actualizado -->
+        <div class="bg-gray-700 shadow-md rounded-lg p-4 mb-2 flex justify-around items-center text-center">
+            <div class="flex-1">
+                <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">Aciertos</p>
                 <p id="correct-score" class="text-2xl font-bold text-green-400">0</p>
             </div>
-            <div>
-                <p class="text-sm text-gray-400">ERRORES</p>
+            
+            <div class="flex-1 border-x border-gray-600">
+                <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">Pregunta</p>
+                <p class="text-2xl font-bold text-teal-400">
+                    <span id="current-pos">1</span> / <span id="total-questions">0</span>
+                </p>
+            </div>
+
+            <div class="flex-1">
+                <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">Errores</p>
                 <p id="incorrect-score" class="text-2xl font-bold text-red-400">0</p>
             </div>
+        </div>
+
+        <!-- Barra de Progreso -->
+        <div class="w-full bg-gray-900 rounded-full h-2.5 mb-6">
+            <div id="progress-indicator" class="progress-bar bg-teal-500 h-2.5 rounded-full" style="width: 0%"></div>
         </div>
 
         <main id="quiz-container">
@@ -118,7 +134,7 @@
             },
             {
                 question: "14. En la prevención y control de la EPOC tenemos diversas líneas de actuación, entre las que no se encuentra:",
-                options: { a: "El cribado o diagnóstico precoz debe realizarse con la Escala de Borg y una analítica.", b: "El abandono del hábito tabáquico se recomienda en los tres tipos de prevenciones.", c: "A los pacientes con EPOC estable no se les debe administrar suplementos nutricionales.", d: "La prevención terciaria incluye la oxigenoterapia." },
+                options: { a: "El cribado o diagnóstico precoz debe realizarse con la Escala de Borg y una analítica.", b: "El avance del hábito tabáquico se recomienda en los tres tipos de prevenciones.", c: "A los pacientes con EPOC estable no se les debe administrar suplementos nutricionales.", d: "La prevención terciaria incluye la oxigenoterapia." },
                 answer: "a"
             },
             {
@@ -208,6 +224,9 @@
         const restartButton = document.getElementById('restart-btn');
         const correctScoreElem = document.getElementById('correct-score');
         const incorrectScoreElem = document.getElementById('incorrect-score');
+        const currentPosElem = document.getElementById('current-pos');
+        const totalQuestionsElem = document.getElementById('total-questions');
+        const progressIndicator = document.getElementById('progress-indicator');
 
         let currentQuestionIndex = 0;
         let correctCount = 0;
@@ -217,6 +236,7 @@
             currentQuestionIndex = 0;
             correctCount = 0;
             incorrectCount = 0;
+            totalQuestionsElem.textContent = quizData.length;
             updateScoreboard();
             showQuestion();
             nextButton.classList.add('hidden');
@@ -232,16 +252,22 @@
                 return;
             }
 
+            // Actualizar marcador de posición
+            currentPosElem.textContent = currentQuestionIndex + 1;
+            const progress = ((currentQuestionIndex) / quizData.length) * 100;
+            progressIndicator.style.width = `${progress}%`;
+
             const item = quizData[currentQuestionIndex];
             let questionHTML = `
-                <div class="bg-gray-700 shadow-md rounded-lg p-6 question-card">
-                    <p class="font-semibold text-lg mb-4">${item.question}</p>
+                <div class="bg-gray-700 shadow-md rounded-lg p-6 question-card border-l-4 border-teal-500">
+                    <p class="font-semibold text-lg mb-4 text-white">${item.question}</p>
                     <div class="space-y-3 options-container">
             `;
             for(const key in item.options) {
                 questionHTML += `
                     <label data-key="${key}" class="option-label flex items-center p-3 rounded-lg border border-gray-600 hover:bg-gray-600 transition cursor-pointer">
-                        <span class="ml-3 text-gray-300">${key.toUpperCase()}. ${item.options[key]}</span>
+                        <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-gray-800 text-teal-400 font-bold mr-3 border border-gray-600">${key.toUpperCase()}</span>
+                        <span class="text-gray-300">${item.options[key]}</span>
                     </label>
                 `;
             }
@@ -281,18 +307,37 @@
             }
 
             updateScoreboard();
+            
+            // Si es la última, mostrar botón de resultados en lugar de "Siguiente"
+            if (currentQuestionIndex === quizData.length - 1) {
+                nextButton.textContent = "Ver Resultados";
+                progressIndicator.style.width = "100%";
+            } else {
+                nextButton.textContent = "Siguiente Pregunta";
+            }
+            
             nextButton.classList.remove('hidden');
         }
         
         function showFinalResults() {
+            const percentage = Math.round((correctCount / quizData.length) * 100);
+            let message = "";
+            if (percentage >= 90) message = "¡Excelente trabajo! Eres un experto.";
+            else if (percentage >= 70) message = "¡Muy bien! Tienes buen conocimiento.";
+            else if (percentage >= 50) message = "Aprobado, pero te vendría bien repasar.";
+            else message = "Necesitas estudiar un poco más.";
+
             quizContainer.innerHTML = `
-                <div class="bg-gray-700 shadow-md rounded-lg p-6 text-center">
-                    <h2 class="text-2xl font-bold mb-4 text-teal-400">¡Test Completado!</h2>
-                    <p class="text-lg text-gray-300">Has finalizado el cuestionario.</p>
+                <div class="bg-gray-700 shadow-md rounded-lg p-8 text-center animate-pulse">
+                    <h2 class="text-3xl font-bold mb-4 text-teal-400">¡Test Completado!</h2>
+                    <div class="text-6xl font-bold mb-4 ${percentage >= 50 ? 'text-green-400' : 'text-red-400'}">${percentage}%</div>
+                    <p class="text-xl text-gray-300 mb-2">Aciertos: ${correctCount} de ${quizData.length}</p>
+                    <p class="text-lg text-gray-400 italic mt-4">${message}</p>
                 </div>
             `;
             nextButton.classList.add('hidden');
             restartButton.classList.remove('hidden');
+            currentPosElem.textContent = quizData.length;
         }
 
         function updateScoreboard() {
@@ -305,7 +350,10 @@
             showQuestion();
         });
 
-        restartButton.addEventListener('click', startQuiz);
+        restartButton.addEventListener('click', () => {
+            nextButton.textContent = "Siguiente Pregunta";
+            startQuiz();
+        });
 
         // Initial start
         startQuiz();
